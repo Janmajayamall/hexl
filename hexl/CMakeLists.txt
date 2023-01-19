@@ -13,9 +13,11 @@ set(NATIVE_SRC
     ntt/ntt-radix-2.cpp
     ntt/ntt-radix-4.cpp
     number-theory/number-theory.cpp
+    c/ntt.cpp
+    c/eltwise.cpp
 )
 
-if (HEXL_EXPERIMENTAL)
+if(HEXL_EXPERIMENTAL)
     list(APPEND NATIVE_SRC
         experimental/seal/dyadic-multiply.cpp
         experimental/seal/key-switch.cpp
@@ -29,7 +31,7 @@ if (HEXL_EXPERIMENTAL)
     )
 endif()
 
-if (HEXL_HAS_AVX512DQ)
+if(HEXL_HAS_AVX512DQ)
     set(AVX512_SRC
         eltwise/eltwise-mult-mod-avx512dq.cpp
         eltwise/eltwise-mult-mod-avx512ifma.cpp
@@ -46,15 +48,16 @@ endif()
 
 set(HEXL_SRC "${NATIVE_SRC};${AVX512_SRC}")
 
-if (HEXL_DEBUG)
+if(HEXL_DEBUG)
     list(APPEND HEXL_SRC logging/logging.cpp)
 endif()
 
-if (HEXL_SHARED_LIB)
+if(HEXL_SHARED_LIB)
     add_library(hexl SHARED ${HEXL_SRC})
 else()
-     add_library(hexl STATIC ${HEXL_SRC})
+    add_library(hexl STATIC ${HEXL_SRC})
 endif()
+
 add_library(HEXL::hexl ALIAS hexl)
 
 hexl_add_asan_flag(hexl)
@@ -65,45 +68,48 @@ configure_file(${HEXL_DEFINES_IN_FILENAME} ${HEXL_DEFINES_FILENAME})
 
 set_target_properties(hexl PROPERTIES POSITION_INDEPENDENT_CODE ON)
 set_target_properties(hexl PROPERTIES VERSION ${HEXL_VERSION})
-if (HEXL_DEBUG)
+
+if(HEXL_DEBUG)
     set_target_properties(hexl PROPERTIES OUTPUT_NAME "hexl_debug")
 else()
     set_target_properties(hexl PROPERTIES OUTPUT_NAME "hexl")
 endif()
 
 target_include_directories(hexl
-    PRIVATE ${HEXL_SRC_ROOT_DIR}                               # Private headers
-    PUBLIC  $<BUILD_INTERFACE:${HEXL_INC_ROOT_DIR}>            # Public headers
-    PUBLIC  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>   # Public headers
+    PRIVATE ${HEXL_SRC_ROOT_DIR} # Private headers
+    PUBLIC $<BUILD_INTERFACE:${HEXL_INC_ROOT_DIR}> # Public headers
+    PUBLIC $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}> # Public headers
 )
+
 if(CpuFeatures_FOUND)
     target_include_directories(hexl PUBLIC ${CpuFeatures_INCLUDE_DIR}) # Public headers
 endif()
 
-if (HEXL_FPGA_COMPATIBILITY STREQUAL "1")
+if(HEXL_FPGA_COMPATIBILITY STREQUAL "1")
     target_compile_options(hexl PRIVATE -DHEXL_FPGA_COMPATIBLE_DYADIC_MULTIPLY)
-elseif (HEXL_FPGA_COMPATIBILITY STREQUAL "2")
+elseif(HEXL_FPGA_COMPATIBILITY STREQUAL "2")
     target_compile_options(hexl PRIVATE -DHEXL_FPGA_COMPATIBLE_KEYSWITCH)
-elseif (HEXL_FPGA_COMPATIBILITY STREQUAL "3")
+elseif(HEXL_FPGA_COMPATIBILITY STREQUAL "3")
     target_compile_options(hexl PRIVATE
         -DHEXL_FPGA_COMPATIBLE_DYADIC_MULTIPLY
         -DHEXL_FPGA_COMPATIBLE_KEYSWITCH
     )
 endif()
 
-if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(hexl PRIVATE -Wall -Wconversion -Wshadow -pedantic -Wextra
         -Wno-unknown-pragmas -march=native -O3 -fomit-frame-pointer
         -Wno-sign-conversion
         -Wno-implicit-int-conversion
     )
+
     # Avoid 3rd-party dependency warnings when including HEXL as a dependency
     target_compile_options(hexl PUBLIC
         -Wno-unknown-warning
         -Wno-unknown-warning-option
     )
 
-elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     # Inlining causes some tests to fail on MSVC with AVX512 in Release mode, HEXL_DEBUG=OFF,
     # so we disable it here
     target_compile_options(hexl PRIVATE /Wall /W4 /Ob0
@@ -114,53 +120,56 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 endif()
 
 install(DIRECTORY ${HEXL_INC_ROOT_DIR}/
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/
-        FILES_MATCHING
-        PATTERN "*.hpp"
-        PATTERN "*.h")
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/
+    FILES_MATCHING
+    PATTERN "*.hpp"
+    PATTERN "*.h")
 
-if (HEXL_SHARED_LIB)
+if(HEXL_SHARED_LIB)
     target_link_libraries(hexl PRIVATE cpu_features)
-    if (HEXL_DEBUG)
+
+    if(HEXL_DEBUG)
         target_link_libraries(hexl PUBLIC easyloggingpp)
+
         # Manually add logging include directory
         target_include_directories(hexl
             PUBLIC $<BUILD_INTERFACE:$<TARGET_PROPERTY:easyloggingpp,INCLUDE_DIRECTORIES>>
         )
     endif()
-else ()
+else()
     # For static library, if the dependencies are not found on the system,
     # we manually add the dependencies for Intel HEXL in the exported library.
 
     # Export logging only if in debug mode
-    if (HEXL_DEBUG)
+    if(HEXL_DEBUG)
         # Manually add logging include directory
         target_include_directories(hexl
             PUBLIC $<BUILD_INTERFACE:$<TARGET_PROPERTY:easyloggingpp,INCLUDE_DIRECTORIES>>
         )
-        if (EASYLOGGINGPP_FOUND)
+
+        if(EASYLOGGINGPP_FOUND)
             target_link_libraries(hexl PRIVATE easyloggingpp)
         else()
             hexl_create_archive(hexl easyloggingpp)
         endif()
     endif()
 
-    if (CpuFeatures_FOUND)
-      target_link_libraries(hexl PRIVATE cpu_features)
+    if(CpuFeatures_FOUND)
+        target_link_libraries(hexl PRIVATE cpu_features)
     else()
-      hexl_create_archive(hexl cpu_features)
+        hexl_create_archive(hexl cpu_features)
     endif()
 
     # Manually add cpu_features include directory
     target_include_directories(hexl
-      PRIVATE $<TARGET_PROPERTY:cpu_features,INTERFACE_INCLUDE_DIRECTORIES>)
+        PRIVATE $<TARGET_PROPERTY:cpu_features,INTERFACE_INCLUDE_DIRECTORIES>)
 endif()
 
 install(TARGETS hexl DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Config export...
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 # Config filenames
 set(HEXL_TARGET_FILENAME ${CMAKE_CURRENT_BINARY_DIR}/cmake/hexl-${HEXL_VERSION}/HEXLTargets.cmake)
@@ -178,15 +187,15 @@ install(
 
 # Export version
 write_basic_package_version_file(
-  ${HEXL_CONFIG_VERSION_FILENAME}
-  VERSION ${HEXL_VERSION}
-  COMPATIBILITY ExactVersion)
+    ${HEXL_CONFIG_VERSION_FILENAME}
+    VERSION ${HEXL_VERSION}
+    COMPATIBILITY ExactVersion)
 
 include(CMakePackageConfigHelpers)
-    configure_package_config_file(
-        ${HEXL_CONFIG_IN_FILENAME} ${HEXL_CONFIG_FILENAME}
-        INSTALL_DESTINATION ${HEXL_CONFIG_INSTALL_DIR}
-    )
+configure_package_config_file(
+    ${HEXL_CONFIG_IN_FILENAME} ${HEXL_CONFIG_FILENAME}
+    INSTALL_DESTINATION ${HEXL_CONFIG_INSTALL_DIR}
+)
 
 install(
     TARGETS hexl
@@ -194,14 +203,14 @@ install(
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    )
+)
 
 install(FILES ${HEXL_CONFIG_FILENAME}
-              ${HEXL_CONFIG_VERSION_FILENAME}
-        DESTINATION ${HEXL_CONFIG_INSTALL_DIR})
+    ${HEXL_CONFIG_VERSION_FILENAME}
+    DESTINATION ${HEXL_CONFIG_INSTALL_DIR})
 
 export(EXPORT HEXLTargets
-        FILE ${HEXL_TARGET_FILENAME})
+    FILE ${HEXL_TARGET_FILENAME})
 
 # Pkgconfig
 get_target_property(HEXL_TARGET_NAME hexl OUTPUT_NAME)
@@ -210,7 +219,7 @@ configure_file(${HEXL_ROOT_DIR}/pkgconfig/hexl.pc.in
     ${HEXL_ROOT_DIR}/pkgconfig/hexl.pc @ONLY)
 
 if(EXISTS ${HEXL_ROOT_DIR}/pkgconfig/hexl.pc)
-  install(
-      FILES ${HEXL_ROOT_DIR}/pkgconfig/hexl.pc
-      DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+    install(
+        FILES ${HEXL_ROOT_DIR}/pkgconfig/hexl.pc
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 endif()

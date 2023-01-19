@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include "hexl/c/eltwise.h"
+#include "hexl/c/ntt.h"
 #include "hexl/eltwise/eltwise-add-mod.hpp"
 #include "hexl/eltwise/eltwise-cmp-add.hpp"
 #include "hexl/eltwise/eltwise-cmp-sub-mod.hpp"
