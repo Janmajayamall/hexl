@@ -22,9 +22,9 @@ FUNC NTT_ComputeForward(void* thisptr, uint64_t* result,
   ntt_op->ComputeForward(result, operand, input_mod_factor, output_mod_factor);
 }
 
-FUNC NTT_ComputerInverse(void* thisptr, uint64_t* result,
-                         const uint64_t* operand, uint64_t input_mod_factor,
-                         uint64_t output_mod_factor) {
+FUNC NTT_ComputeInverse(void* thisptr, uint64_t* result,
+                        const uint64_t* operand, uint64_t input_mod_factor,
+                        uint64_t output_mod_factor) {
   NTT* ntt_op = reinterpret_cast<NTT*>(thisptr);
   ntt_op->ComputeInverse(result, operand, input_mod_factor, output_mod_factor);
 }
