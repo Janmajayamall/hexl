@@ -54,8 +54,8 @@ FUNC Eltwise_MultMod(uint64_t* result, const uint64_t* operand1,
 FUNC Eltwise_ReduceMod(uint64_t* result, const uint64_t* operand, uint64_t n,
                        uint64_t modulus, uint64_t input_mod_factor,
                        uint64_t output_mod_factor) {
-  Eltwise_ReduceMod(result, operand, n, modulus, input_mod_factor,
-                    output_mod_factor);
+  EltwiseReduceMod(result, operand, n, modulus, input_mod_factor,
+                   output_mod_factor);
 }
 
 FUNC Eltwise_SubMod(uint64_t* result, const uint64_t* operand1,
