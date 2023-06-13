@@ -28,3 +28,8 @@ FUNC NTT_ComputeInverse(void* thisptr, uint64_t* result,
   NTT* ntt_op = reinterpret_cast<NTT*>(thisptr);
   ntt_op->ComputeInverse(result, operand, input_mod_factor, output_mod_factor);
 }
+
+FUNC NTT_Destroy(void* thisptr) { 
+  NTT* ntt_op = reinterpret_cast<NTT*>(thisptr);
+  delete ntt_op;
+}
